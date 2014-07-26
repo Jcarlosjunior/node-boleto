@@ -1,24 +1,30 @@
-var formatters = require('../../lib/formatters'),
-helper = require('./helper');
+var formatters = require('../../lib/formatters');
+
+function carteiraComRegistro(carteira) {
+    var carteiras = ['175', '176', '178', '109', '121'];
+    return carteiras.indexOf(carteira) != -1;
+}
+
+function carteiraSemRegistro(carteira) {
+    var carteiras = ['198', '107', '122', '142', '143', '196'];
+    return carteiras.indexOf(carteira) != -1;
+}
+
+function dvNossoNumeroDiferenciado(carteira) {
+    var carteiras = ['126', '131', '146', '150', '168'];
+    return carteiras.indexOf(carteira) != -1;
+}
 
 exports.options = {
-    logoURL: '',
+    logoURL: 'http://borboleto.com.br/boletos/itau/imagens/logo_itau.gif',
     codigo: '341',
-    carteiraComRegistro : function (carteira) {
-        var carteiras = ['175', '176', '178', '109', '121'];
-        return carteiras.indexOf(carteira) != -1;
-    },
-    carteiraSemRegistro : function (carteira) {
-        var carteiras = ['198', '107', '122', '142', '143', '196'];
-        return carteiras.indexOf(carteira) != -1;
-    },
-}
+};
 
 exports.dvBarra = function(barra) {
     var resto2 = formatters.mod11(barra, 9, 1);
     var digito = 11 - resto2;
-    return (digito== 0 || digito== 1 || digito== 10 || digito== 11) ? 1 : digito;
-}
+    return (digito === 0 || digito === 1 || digito === 10 || digito === 11) ? 1 : digito;
+};
 
 exports.barcodeData = function(boleto){
     var codigoBanco = this.options.codigo;
@@ -27,8 +33,14 @@ exports.barcodeData = function(boleto){
     var valor = formatters.addTrailingZeros(boleto['valor'], 10);
     var carteira = boleto['carteira'];
     var nossoNumero = formatters.addTrailingZeros(boleto['nosso_numero'], 8);
+    var dvNossoNumero = '';
 
-    var dvNossoNumero = formatters.mod10(agencia + conta + carteira + nossoNumero);
+    if (dvNossoNumeroDiferenciado(carteira)){
+        dvNossoNumero = formatters.mod10(carteira + nossoNumero);
+    } else {
+        dvNossoNumero = formatters.mod10(agencia + conta + carteira + nossoNumero);
+    }
+
     var agencia = formatters.addTrailingZeros(boleto['agencia'], 4);
     var conta = formatters.addTrailingZeros(boleto['conta'], 5);
     var dvConta = formatters.mod10(agencia + conta);
@@ -40,7 +52,7 @@ exports.barcodeData = function(boleto){
     var barra = codigoBanco + numMoeda + fatorVencimento + valor + carteira + nossoNumero;
 
 
-    if (this.options.carteiraComRegistro(carteira)) 
+    if (carteiraComRegistro(carteira)) 
     {
         barra = barra + dvNossoNumero + agencia + conta + dvConta + '000';
     } 
@@ -54,7 +66,7 @@ exports.barcodeData = function(boleto){
     var lineData = barra.substring(0, 4) + dvBarra + barra.substring(4, barra.length);
 
     return lineData;
-}
+};
 
 exports.linhaDigitavel = function(barcodeData) {
     // Posição 	Conteúdo
@@ -78,13 +90,13 @@ exports.linhaDigitavel = function(barcodeData) {
     // 33 a 36  Fator Vencimento
     // 37 a 46  Valor
 
+    var carteira = barcodeData.substring(19, 22);
 
     function primeiroGrupo(){
 
-        var numeroBanco = barcodeData.substring(0, 2);
-        var codigoMoeda = barcodeData.substring(3, 3);
-        var carteira = barcodeData.substring(19, 21);
-        var ddNossoNumero =  barcodeData.substring(22, 23);
+        var numeroBanco = barcodeData.substring(0, 3);
+        var codigoMoeda = barcodeData.substring(3, 4);
+        var ddNossoNumero =  barcodeData.substring(22, 24);
         var dvGrupo = formatters.mod10(numeroBanco + codigoMoeda + carteira + ddNossoNumero);
 
         var grupo =  numeroBanco + codigoMoeda + carteira + ddNossoNumero + dvGrupo;
@@ -94,45 +106,71 @@ exports.linhaDigitavel = function(barcodeData) {
 
     function segundoGrupo(){
 
-        var restanteNossoNumero = barcodeData.substring(24, 29);
-        var dvNossoNumero = barcodeData.substring(30, 30);
-        var dddAgencia = barcodeData.substring(31, 33);
-        var dvGrupo = formatters.mod10(restanteNossoNumero + dvNossoNumero + dddAgencia);
+        var restanteNossoNumero = barcodeData.substring(24, 30);
+        var grupo = restanteNossoNumero;
 
-        var grupo = restanteNossoNumero + dvNossoNumero + dddAgencia + dvGrupo;
+        if (carteiraComRegistro(carteira))
+        {
+            var dvNossoNumero = barcodeData.substring(30, 31);
+            var dddAgencia = barcodeData.substring(31, 34);
+            var dvGrupoComRegistro = formatters.mod10(restanteNossoNumero + dvNossoNumero + dddAgencia);
+
+            grupo = grupo + dvNossoNumero + dddAgencia + dvGrupoComRegistro;
+        }
+        else
+        {
+            var ddddNumeroDocumento = barcodeData.substring(30, 34);
+            var dvGrupoSemRegistro = formatters.mod10(restanteNossoNumero + ddddNumeroDocumento);
+
+            grupo = grupo + ddddNumeroDocumento + dvGrupoSemRegistro;
+        }
 
         return grupo.substring(0, 5) + '.' + grupo.substring(5, grupo.length);
     }
 
     function terceiroGrupo(){
 
-        var restanteAgencia = barcodeData.substring(34, 34);
-        var conta = barcodeData.substring(35, 39);
-        var dvConta = barcodeData.substring(40, 40);
-        var zeros = barcodeData.substring(41, 43);
-        var dvGrupo = formatters.mod10(restanteAgencia + conta + dvConta + zeros);
+        var grupo;
 
-        var grupo = restanteAgencia + conta_e_conta_dv + zeros + dvGrupo;
+        if (carteiraComRegistro(carteira)){
+
+            var restanteAgencia = barcodeData.substring(34, 35);
+            var conta = barcodeData.substring(35, 40);
+            var dvConta = barcodeData.substring(40, 41);
+            var zeros = barcodeData.substring(41, 44);
+            var dvGrupoComRegistro = formatters.mod10(restanteAgencia + conta + dvConta + zeros);
+
+            grupo = restanteAgencia + conta + dvConta + zeros + dvGrupoComRegistro;
+
+        } else {
+
+            var restanteNumeroDocumento = barcodeData.substring(34, 37);
+            var codigoCliente = barcodeData.substring(37, 42);
+            var dvCabecalhoDocumento = barcodeData.substring(42,43);
+            var dvGrupoSemRegistro = formatters.mod10(codigoCliente + dvCabecalhoDocumento + '0');
+
+            grupo = restanteNumeroDocumento + codigoCliente + dvCabecalhoDocumento + '0' + dvGrupoSemRegistro;
+        }
 
         return  grupo.substring(0, 5) + '.' + grupo.substring(5, grupo.length);
     }
 
     function quartoGrupo() {
 
-        var dvCodigoBarras =  barcodeData.substring(4, 4);
+        var dvCodigoBarras =  barcodeData.substring(4, 5);
 
         return dvCodigoBarras;
     }
 
     function quintoGrupo() {
 
-        var fator = barcodeData.substring(5, 8);
-        var valor = barcodeData.substring(9, 18);
+        var fator = barcodeData.substring(5, 9);
+        var valor = barcodeData.substring(9, 19);
 
         return fator + valor;
     }
 
-    var campos = new Array();
+    var campos = [];
 
     campos.push(primeiroGrupo());
     campos.push(segundoGrupo());
@@ -141,6 +179,6 @@ exports.linhaDigitavel = function(barcodeData) {
     campos.push(quintoGrupo());
 
     return campos.join(" ");
-}
+};
 
 
