@@ -33,6 +33,13 @@ exports.barcodeData = function(boleto){
     var valor = formatters.addTrailingZeros(boleto['valor'], 10);
     var carteira = boleto['carteira'];
     var nossoNumero = formatters.addTrailingZeros(boleto['nosso_numero'], 8);
+    var agencia = formatters.addTrailingZeros(boleto['agencia'], 4);
+    var conta = formatters.addTrailingZeros(boleto['conta'], 5);
+    var dvConta = formatters.mod10(agencia + conta);
+    var numeroDocumento = formatters.addTrailingZeros(boleto['numero_documento'], 7);
+    var codigoCedente = formatters.addTrailingZeros(boleto['codigo_cedente'], 5);
+    var dvCabecalhoDocumento = formatters.mod10(carteira + nossoNumero + numeroDocumento + codigoCedente);
+
     var dvNossoNumero = '';
 
     if (dvNossoNumeroDiferenciado(carteira)){
@@ -41,16 +48,7 @@ exports.barcodeData = function(boleto){
         dvNossoNumero = formatters.mod10(agencia + conta + carteira + nossoNumero);
     }
 
-    var agencia = formatters.addTrailingZeros(boleto['agencia'], 4);
-    var conta = formatters.addTrailingZeros(boleto['conta'], 5);
-    var dvConta = formatters.mod10(agencia + conta);
-
-    var numeroDocumento = formatters.addTrailingZeros(boleto['numero_documento'], 7);
-    var codigoCedente = formatters.addTrailingZeros(boleto['codigo_cedente'], 5);
-    var dvCabecalhoDocumento = formatters.mod10(carteira + nossoNumero + numeroDocumento + codigoCedente);
-
     var barra = codigoBanco + numMoeda + fatorVencimento + valor + carteira + nossoNumero;
-
 
     if (carteiraComRegistro(carteira)) 
     {
