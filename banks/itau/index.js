@@ -67,26 +67,6 @@ exports.barcodeData = function(boleto){
 };
 
 exports.linhaDigitavel = function(barcodeData) {
-    // Posição 	Conteúdo
-        // 1 a 3    Número do banco
-    // 4        Código da Moeda - 9 para Real ou 8 - outras moedas
-    // 5 a 7    Carteira 
-    // 8 a 9    2 primeiros digitos do Nosso Numero
-    // 10 a 10  Digito verificador Primeiro Grupo
-
-    // 11 a 17  Restante do Nosso Numero (7 digitos) - total 9 (incluindo digito verificador)
-    // 18 a 20  3 primeiros digitos da Agência
-    // 21       Digito verificador Segundo Grupo
-
-    // 22       Restante da Agência
-    // 23 a 28  Número da Conta Corrente
-    // 28 a 30  Zeros
-    // 31       Digito verificador Terceiro Grupo 
-
-    // 32       Digito verificador Código de Barras
-
-    // 33 a 36  Fator Vencimento
-    // 37 a 46  Valor
 
     var carteira = barcodeData.substring(19, 22);
 
